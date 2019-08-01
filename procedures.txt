@@ -1,0 +1,91 @@
+
+--procedura, która dodaje nowy wypo¿yczenie
+create proc [dbo].[DodajWypozyczenie]
+@czytelnik nvarchar (100),
+@bibliotekarz nvarchar(100)
+
+as
+if (
+select count(*)
+from Wypozyczenia
+where id_czytelnika=@czytelnik
+)=0
+begin
+insert into Wypozyczenia(id_czytelnika,id_bibliotekarza) values(@czytelnik,@bibliotekarz)
+ print 'Wypo¿yczenie zosta³o pomyœlnie dodane!'
+end
+else if
+(
+select count(*)
+from Wypozyczenia
+where id_czytelnika=@czytelnik and status_wypozyczenia='zakoñczone'
+)>=1
+begin
+insert into Wypozyczenia(id_czytelnika,id_bibliotekarza) values(@czytelnik,@bibliotekarz)
+print 'Wypo¿yczenie zosta³o pomyœlnie dodane!'
+end
+else
+print 'Nie mo¿na dodaæ wypo¿yczenia. Ten czytelnik posiada ju¿ 1 aktywne wypo¿yczenie'
+go
+--procedura, która dodaje nowego czytelnika(sprawdza czy pesel sie zgadza)
+
+create proc Dodaj_Czytelnika
+@Imie nvarchar (100),
+@Nazwisko nvarchar (100),
+@pesel varchar(20),
+@telefon bigint
+as
+if(len(@pesel))=11
+begin 
+insert into Czytelnicy(Imie,Nazwisko,PESEL,telefon)values(@Imie,@Nazwisko,@pesel,@telefon)
+print 'Nowy czytelnik zosta³ dodany do bazy!'
+end
+else
+begin
+print 'Podany pesel jest nieprawid³owy !'
+end
+go
+
+--procedura która dodaje pozycje do wypo¿yczenia
+
+create proc Dodaj_Pozycje
+@wypozyczenie int,
+@ksiazka int
+
+as
+
+if
+(
+select count(*)
+from PozycjeWypozyczenia
+where id_ksiazki=@ksiazka
+)=0
+and
+(
+select count(*)
+from Wypozyczenia
+where id_wypozyczenia=@wypozyczenie and DataOddania is NULL)=1
+
+begin
+insert into PozycjeWypozyczenia(id_wypozyczenia,id_ksiazki) values(@wypozyczenie,@ksiazka)
+end
+else 
+begin 
+print 'Dodanie pozycji do tego wypozyczenia nie jest mo¿liwe'
+end
+GO
+
+--procedura zwracajaca wypozyczone ksiazki
+go
+create proc ZwrocKsiazki
+@wypozyczenie int
+as
+begin
+delete from PozycjeWypozyczenia
+where id_wypozyczenia=@wypozyczenie
+end
+begin
+update Wypozyczenia
+set DataOddania=getdate(), status_wypozyczenia='zakoñczone'
+where id_wypozyczenia=@wypozyczenie
+end
